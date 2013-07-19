@@ -22,10 +22,14 @@ References:
 */
 
 var fs = require('fs');
+var rest = require('restler');
 var program = require('commander');
 var cheerio = require('cheerio');
 var HTMLFILE_DEFAULT = "index.html";
 var CHECKSFILE_DEFAULT = "checks.json";
+var URL_DEFAULT = "http://www.google.com";
+var resultstr = "";
+
 
 var assertFileExists = function(infile) {
     var instr = infile.toString();
@@ -44,8 +48,16 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile) {
-    $ = cheerioHtmlFile(htmlfile);
+var checkHtmlFile = function(htmlfile, checksfile, urlfile) {
+    console.log('log 1. checkhtmlfile'); 
+    if(urlfile){
+	console.log('log 2. urlfile %s',urlfile);
+	rest.get(urlfile).on('complete',processUrl);
+        $ = cheerioHtmlFile('tempgrade.html');
+    }else{	
+	$ = cheerioHtmlFile(htmlfile);
+    }
+    console.log('log 3. ');
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -54,6 +66,17 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     }
     return out;
 };
+
+var processUrl = function(result, response) {
+    console.log('processUrl');
+    if(result instanceof Error) {
+	console.error('Error reading url');
+    }
+    else {
+	fs.writeFileSync('tempgrade.html',result);
+    }
+};
+
 
 var clone = function(fn) {
     // Workaround for commander.js issue.
@@ -65,10 +88,11 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks);
+	.option('-u, --url <myurl>', 'Url to get')
+     .parse(process.argv);
+    var checkJson = checkHtmlFile(program.file, program.checks, program.url);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
 } else {
-    exports.checkHtmlFile = checkHtmlFile;
+    exports.checkHtmlFile = Checkhtmlfile;
 }
