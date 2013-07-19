@@ -48,16 +48,11 @@ var loadChecks = function(checksfile) {
     return JSON.parse(fs.readFileSync(checksfile));
 };
 
-var checkHtmlFile = function(htmlfile, checksfile, urlfile) {
-    console.log('log 1. checkhtmlfile'); 
-    if(urlfile){
-	console.log('log 2. urlfile %s',urlfile);
-	rest.get(urlfile).on('complete',processUrl);
-        $ = cheerioHtmlFile('tempgrade.html');
-    }else{	
-	$ = cheerioHtmlFile(htmlfile);
-    }
-    console.log('log 3. ');
+var checkHtmlFile = function(htmlfile, checksfile) {
+    //console.log('log 1. checkhtmlfile'); 
+    $ = cheerioHtmlFile(htmlfile);
+    
+    //console.log('log 3. ');
     var checks = loadChecks(checksfile).sort();
     var out = {};
     for(var ii in checks) {
@@ -68,13 +63,21 @@ var checkHtmlFile = function(htmlfile, checksfile, urlfile) {
 };
 
 var processUrl = function(result, response) {
-    console.log('processUrl');
+    //console.log('processUrl');
     if(result instanceof Error) {
 	console.error('Error reading url');
     }
     else {
 	fs.writeFileSync('tempgrade.html',result);
     }
+     var checkJson = checkHtmlFile('tempgrade.html', program.checks);
+     var outJson = JSON.stringify(checkJson, null, 4);
+     console.log(outJson);
+};
+
+var readfileccm = function(urltoread) {
+    //console.log('readfileccm');
+    rest.get(urltoread).on('complete',processUrl);
 };
 
 
@@ -90,9 +93,13 @@ if(require.main == module) {
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
 	.option('-u, --url <myurl>', 'Url to get')
      .parse(process.argv);
-    var checkJson = checkHtmlFile(program.file, program.checks, program.url);
+    if(program.url){
+     readfileccm(program.url); 
+    }else{    
+    var checkJson = checkHtmlFile(program.file, program.checks);
     var outJson = JSON.stringify(checkJson, null, 4);
     console.log(outJson);
+    }
 } else {
     exports.checkHtmlFile = Checkhtmlfile;
 }
